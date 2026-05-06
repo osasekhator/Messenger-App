@@ -24,6 +24,8 @@ function Signup(){
 
             if(response.ok){
                 console.log("Signup successful:", data)
+                setUsername("");
+                setPassword("");
                 navigate("/login");
             }
             else{

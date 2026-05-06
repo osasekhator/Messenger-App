@@ -1,6 +1,7 @@
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
 from auth import hash_password, verify_password, create_access_token
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 from database import messages_collection, user_collection
 import json
 
@@ -8,7 +9,7 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["http://localhost:3000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -40,6 +41,10 @@ class ConnectionManager:
         for connection in disconnected:
             self.disconnect(connection)
 
+class User(BaseModel):
+    username: str
+    password: str
+    
 manager = ConnectionManager()
 
 
@@ -77,21 +82,43 @@ async def websocket_endpoint(websocket: WebSocket):
         manager.disconnect(websocket)
         print("Client disconnected")
 
-# user signup endpoint (WIP)
+# user signup endpoint)
 @app.post("/signup")
-async def signup(username: str, password: str):
+async def signup(user: User):
 
     existing_user = await user_collection.find_one({
-        "username": username
+        "username": user.username
     })
     if existing_user:
         raise HTTPException(status_code=400, detail="User already exists")
     
-    hashed_pwd = hash_password(password)
-    user_data = {"username": username, "hashed_password": hashed_pwd}
+    hashed_pwd = hash_password(user.password)
+    user_data = {"username": user.username, "hashed_password": hashed_pwd}
+
     await user_collection.insert_one(user_data)
+
     return {"message": "User created"}
 
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="127.0.0.1", port=8000)
+
+# login endpoint (WIP)
+@app.post("/login")
+async def login(user:User):
+    
+    existing_user = await user_collection.find_one(
+        {
+            "username": user.username
+        }
+    )
+
+    if not existing_user:
+        raise HTTPException(status_code=400, detail="Invalid username or password")
+    
+    if not verify_password(user.password, existing_user["hashed_password"]):
+        raise HTTPException(status_code=400, detail="Invalid username or password")
+    
+    token = create_access_token({"sub": user.username})
+    
+    return {"access_token": token, "token_type": "bearer"}

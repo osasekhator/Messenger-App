@@ -1,13 +1,13 @@
 import React from "react";
 import './App.css';
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
-import Homepage from "./HomePage";
-import DMess from "./DMess";
-import GChats from "./GChats";
-import Login from "./Login";
-import Signup from "./Signup";
-import Header from "./Header";
-import Footer from "./Footer"
+import Homepage from "./components/HomePage";
+import DMess from "./components/DMess";
+import GChats from "./components/GChats";
+import Login from "./components/Login";
+import Signup from "./components/Signup";
+import Header from "./components/Header";
+import Footer from "./components/Footer"
 
 function App() {
   return (
