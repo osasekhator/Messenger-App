@@ -1,8 +1,8 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
-import "./App.css";
+import "../App.css";
 
-function MainSection(){
+function HomePage(){
     const navigate = useNavigate();
 
     const handleLogin = () =>{
@@ -27,4 +27,4 @@ function MainSection(){
     );
 }
 
-export default MainSection;
+export default HomePage;
