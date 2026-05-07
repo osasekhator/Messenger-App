@@ -6,7 +6,13 @@ function ChatRoom() {
     const socket = useRef(null);
 
     useEffect(() => {
-        socket.current = new WebSocket("ws://127.0.0.1:8000/chat");
+        const token = localStorage.getItem("token");
+        if (!token) {
+            console.error("No token found, cannot connect to WebSocket");
+            return;
+        }
+
+        socket.current = new WebSocket(`ws://127.0.0.1:8000/chat?token=${token}`);
 
         socket.current.onmessage = (event) => {
             const data = JSON.parse(event.data);
@@ -22,12 +28,7 @@ function ChatRoom() {
             return;
         }
 
-        const message = {
-            sender: "Osas",
-            content: input,
-        };
-
-        socket.current.send(JSON.stringify(message));
+        socket.current.send(input);
 
         setInput("");
     };
@@ -37,7 +38,7 @@ function ChatRoom() {
             <div>
                 {messages.map((msg, i) => (
                     <p key={i}>
-                        <strong>{msg.sender}:</strong> {msg.content}
+                        <strong>{msg.username}:</strong> {msg.content}
                     </p>
                 ))}
             </div>

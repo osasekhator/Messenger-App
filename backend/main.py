@@ -1,5 +1,5 @@
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect, HTTPException
-from auth import hash_password, verify_password, create_access_token
+from auth import hash_password, verify_password, create_access_token, verify_token
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from database import messages_collection, user_collection
@@ -9,7 +9,7 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],
+    allow_origins=["http://localhost:3000", "http://localhost:3001"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -49,9 +49,16 @@ manager = ConnectionManager()
 
 
 @app.websocket("/chat")
-async def websocket_endpoint(websocket: WebSocket):
+async def websocket_endpoint(websocket: WebSocket, token: str):
 
     await manager.connect(websocket)
+
+    # verify the access token
+    username = verify_token(token)
+
+    if not username:
+        await websocket.close()
+        return
 
     # send old messages for chat history
     old_messages = await messages_collection.find().to_list(100)
@@ -67,7 +74,11 @@ async def websocket_endpoint(websocket: WebSocket):
 
             data = await websocket.receive_text()
 
-            message = json.loads(data)
+            # create message object with username and content
+            message = {
+                "username": username,
+                "content": data
+            }
 
             # save to MongoDB
             result = await messages_collection.insert_one(message)
@@ -120,5 +131,5 @@ async def login(user:User):
         raise HTTPException(status_code=400, detail="Invalid username or password")
     
     token = create_access_token({"sub": user.username})
-    
+
     return {"access_token": token, "token_type": "bearer"}
