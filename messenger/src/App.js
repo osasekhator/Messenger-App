@@ -6,6 +6,7 @@ import DMess from "./components/DMess";
 import GChats from "./components/GChats";
 import Login from "./components/Login";
 import Signup from "./components/Signup";
+import ConvoBoard from "./components/ConvoBoard";
 import Header from "./components/Header";
 import Footer from "./components/Footer"
 
@@ -14,16 +15,16 @@ function App() {
     <div className="App">
       <Router>
         <Header/>
-        <Routes>
-          <Route path= "/" element= {<Homepage/>}/>
-          <Route path= "/dm" element= {<DMess/>}/>
-          <Route path= "/groups" element= {<GChats/>}/>
-          <Route path="/login" element= {<Login/>}/>
-          <Route path="/signup" element= {<Signup/>}/>
-          
-        </Routes>
+          <Routes>
+            <Route path= "/" element= {<Homepage/>}/>
+            <Route path= "/dm" element= {<DMess/>}/>
+            <Route path= "/groups" element= {<GChats/>}/>
+            <Route path="/login" element= {<Login/>}/>
+            <Route path="/signup" element= {<Signup/>}/>
+            <Route path="/conversations" element= {<ConvoBoard/>}/>
+          </Routes>
         <Footer/>
-      </Router>
+        </Router>
     </div>
   );
 }

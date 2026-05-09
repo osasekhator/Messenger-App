@@ -11,3 +11,4 @@ client = AsyncIOMotorClient(MONGO_URI)
 db = client.chat_app
 messages_collection = db.messages
 user_collection = db.users
+conversations_collection = db.conversations
