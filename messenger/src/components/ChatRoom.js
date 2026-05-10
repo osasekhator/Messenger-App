@@ -1,49 +1,48 @@
 import React, { useEffect, useRef, useState } from "react";
+import { useSocket } from "./SocketContext";
 
 function ChatRoom({ conversation }) {
 
     const [messages, setMessages] = useState([]);
     const [input, setInput] = useState("");
-    const socket = useRef(null);
 
+    const { socketRef, send } = useSocket();
+
+    // useEffect for joining a room and loading message history
     useEffect(() => {
-
-        if (!conversation) return;
-
-        const token = localStorage.getItem("token");
-
-        if (!token) {
-            console.error("No token found");
+        if (!conversation || !socketRef.current) {
+            console.log("early return — conversation:", conversation, "socket:", socketRef.current);
             return;
         }
 
-        // clear old messages when switching chats
-        setMessages([]);
+        //if (!conversation) return;
+        console.log("Selected convo:", conversation);
 
-        socket.current = new WebSocket(
-            `ws://127.0.0.1:8000/chat/${conversation._id}?token=${token}`
-        );
+        setMessages([]); // clear old messages when switching conversations
 
-        socket.current.onopen = () => {
-            console.log("Connected to websocket");
-        };
+        const payload = {
+            type: "join",
+            conversation_id: conversation._id
+        }
 
-        socket.current.onmessage = (event) => {
+        send(payload);
+        console.log("Sent join for:", conversation._id);
+
+        if (!socketRef.current) return;
+
+        const loadHistory = (event) => {
             const data = JSON.parse(event.data);
-
+            //console.log("Selected convo:", conversation);
             console.log("Received:", data);
 
             setMessages((prev) => [...prev, data]);
         };
 
-        socket.current.onclose = () => {
-            console.log("Websocket disconnected");
-        };
+        
+         socketRef.current.addEventListener("message", loadHistory); // listen for the next message to add to the history
 
-        return () => {
-            if (socket.current) {
-                socket.current.close();
-            }
+        return() => {
+            socketRef.current.removeEventListener("message", loadHistory); // cleanup the event listener when the component unmounts or conversation changes
         };
 
     }, [conversation]);
@@ -52,19 +51,19 @@ function ChatRoom({ conversation }) {
 
         if (!input.trim()) return;
 
-        if (!socket.current || socket.current.readyState !== WebSocket.OPEN) {
-            console.error("Socket not connected");
-            return;
+        const message = {
+            type: "message",
+            conversation_id: conversation._id,
+            content: input
         }
 
-        socket.current.send(input);
+        send(message);
 
         setInput("");
     };
 
     return (
         <div>
-
             <div>
                 {messages.map((msg, i) => (
                     <p key={i}>
@@ -86,7 +85,6 @@ function ChatRoom({ conversation }) {
             <button onClick={sendMessage}>
                 Send
             </button>
-
         </div>
     );
 }

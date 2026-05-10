@@ -20,21 +20,29 @@ app.add_middleware(
 class ConnectionManager:
     def __init__(self):
         self.active_connections = {}
+        self.socket_rooms = {}
 
-    async def connect(self, websocket: WebSocket, conversation_id: str):
+    async def connect(self, websocket: WebSocket):
         await websocket.accept()
+
+    def join_room(self, websocket: WebSocket, conversation_id: str):
+        self.socket_rooms[websocket] = conversation_id
 
         if conversation_id not in self.active_connections:
             self.active_connections[conversation_id] = []
 
         self.active_connections[conversation_id].append(websocket)
 
-    def disconnect(self, websocket: WebSocket, conversation_id: str):
-        if conversation_id in self.active_connections:
+    def disconnect(self, websocket: WebSocket):
+        conversation_id = self.socket_rooms.get(websocket)
+
+        if conversation_id and conversation_id in self.active_connections:
             if websocket in self.active_connections[conversation_id]:
                 self.active_connections[conversation_id].remove(websocket)
 
-    # broadcast message to all the connected clients
+        if websocket in self.socket_rooms:
+            del self.socket_rooms[websocket]
+
     async def broadcast(self, conversation_id: str, message: dict):
         if conversation_id not in self.active_connections:
             return
@@ -48,19 +56,20 @@ class ConnectionManager:
                 disconnected.append(connection)
 
         for conn in disconnected:
-            self.disconnect(conn, conversation_id)
+            self.disconnect(conn)
+
 
 class User(BaseModel):
     username: str
     password: str
-    
+
 class ConvoRequest(BaseModel):
     user_id: str
     type: str
 
+
 manager = ConnectionManager()
 
-# ----conversation endpoints-----
 
 @app.post("/conversations")
 async def create_conversation(conversation: dict):
@@ -83,9 +92,9 @@ async def create_conversation(conversation: dict):
     convo["_id"] = str(result.inserted_id)
     return convo
 
+
 @app.post("/getconversations")
 async def get_conversations(request: ConvoRequest):
-
     conversations = await conversations_collection.find(
         {
             "participants": ObjectId(request.user_id),
@@ -99,7 +108,6 @@ async def get_conversations(request: ConvoRequest):
         convo["_id"] = str(convo["_id"])
         convo["participants"] = [str(p) for p in convo["participants"]]
 
-        # DM: pull the other participant's username to display as the convo name in the frontend
         if convo["type"] == "DMs":
             other_participants = [
                 p for p in convo["participants"]
@@ -116,94 +124,103 @@ async def get_conversations(request: ConvoRequest):
 
     return result
 
-# -----websocket endpoint for real-time chat (WIP: still working through connections closing spontneously---)
-@app.websocket("/chat/{conversation_id}")
-async def websocket_endpoint(websocket: WebSocket, token: str, conversation_id: str):
 
-    await manager.connect(websocket, conversation_id)
+@app.websocket("/chat")
+async def websocket_endpoint(websocket: WebSocket, token: str):
 
-    # verify the access token
+    await manager.connect(websocket)
+
+    conversation_id = None
+
     userID = verify_token(token)
 
     if not userID:
         await websocket.close()
         return
-    
-    conversation = await conversations_collection.find_one({
-        "_id": ObjectId(conversation_id)
-    })
 
-    if not conversation:
-        await websocket.close()
-        return
-    
     user = await user_collection.find_one({
         "_id": ObjectId(userID)
     })
 
     username = user["username"]
 
-    # send old messages for chat history
-    old_messages = await messages_collection.find(
-        {
-            "conversation_id": ObjectId(conversation_id)
-        }
-    ).to_list(100)
-
-    for msg in old_messages:
-
-        msg["_id"] = str(msg["_id"])
-        msg["user_id"] = str(msg["user_id"])
-        msg["conversation_id"] = str(msg["conversation_id"])
-        msg["timestamp"] = msg["timestamp"].isoformat()
-
-        await websocket.send_json(msg)
-
     try:
         while True:
+            raw_data = await websocket.receive_text()
+            data = json.loads(raw_data)
+            command = data["type"]
 
-            data = await websocket.receive_text()
+            if command == "join":
+                conversation_id = data["conversation_id"]
+                print("Joining conversation:", conversation_id)
 
-            # create message object with username and content
-            message = {
-                "conversation_id": ObjectId(conversation_id),
-                "user_id": ObjectId(userID),
-                "sender": username,
-                "content": data,
-                "timestamp": datetime.now(timezone.utc).isoformat()
-            }
+                conversation = await conversations_collection.find_one({
+                    "_id": ObjectId(conversation_id)
+                })
 
-            # save to MongoDB
-            result = await messages_collection.insert_one(message)
+                if not conversation:
+                    await websocket.close()
+                    print("Conversation not found")
+                    return
 
-            # add serializable id (kept getting "cannot serialize ObjectId" error without this)
-            message["_id"] = str(result.inserted_id)
-            message["user_id"] = str(message["user_id"])
-            message["conversation_id"] = str(message["conversation_id"])
+                manager.join_room(websocket, conversation_id)
 
-            # broadcast the  message
-            await manager.broadcast(conversation_id, message)
+                old_messages = await messages_collection.find(
+                    {
+                        "conversation_id": ObjectId(conversation_id)
+                    }
+                ).to_list(100)
+
+                print("Found messages:", len(old_messages))
+
+                for msg in old_messages:
+                    msg["_id"] = str(msg["_id"])
+                    msg["user_id"] = str(msg["user_id"])
+                    msg["conversation_id"] = str(msg["conversation_id"])
+                    msg["timestamp"] = msg["timestamp"].isoformat() if isinstance(msg["timestamp"], datetime) else msg["timestamp"]
+
+                    await websocket.send_json(msg)
+
+            elif command == "message":
+                conversation_id = manager.socket_rooms.get(websocket)
+
+                if not conversation_id:
+                    print("No conversation joined")
+                    return
+
+                message = {
+                    "conversation_id": ObjectId(conversation_id),
+                    "user_id": ObjectId(userID),
+                    "sender": username,
+                    "content": data["content"],
+                    "timestamp": datetime.now(timezone.utc)
+                }
+
+                result = await messages_collection.insert_one(message)
+
+                message["_id"] = str(result.inserted_id)
+                message["user_id"] = str(message["user_id"])
+                message["conversation_id"] = str(message["conversation_id"])
+                message["timestamp"] = message["timestamp"].isoformat()
+                await manager.broadcast(conversation_id, message)
 
     except WebSocketDisconnect:
-        manager.disconnect(websocket, conversation_id)
+        manager.disconnect(websocket)
         print("Client disconnected")
 
     except Exception as e:
         print("Websocket error:", e)
-        manager.disconnect(websocket, conversation_id)
+        manager.disconnect(websocket)
 
-# -----my authentication endpoints (signup and login)-----
 
-# user signup endpoint)
 @app.post("/signup")
 async def signup(user: User):
-
     existing_user = await user_collection.find_one({
         "username": user.username
     })
     if existing_user:
         raise HTTPException(status_code=400, detail="User already exists")
-    
+
     hashed_pwd = hash_password(user.password)
     user_data = {"username": user.username, "hashed_password": hashed_pwd}
 
@@ -211,14 +228,9 @@ async def signup(user: User):
 
     return {"message": "User created"}
 
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="127.0.0.1", port=8000)
 
-# login endpoint
 @app.post("/login")
-async def login(user:User):
-    
+async def login(user: User):
     existing_user = await user_collection.find_one(
         {
             "username": user.username
@@ -227,11 +239,15 @@ async def login(user:User):
 
     if not existing_user:
         raise HTTPException(status_code=400, detail="Invalid username or password")
-    
+
     if not verify_password(user.password, existing_user["hashed_password"]):
         raise HTTPException(status_code=400, detail="Invalid username or password")
-    
+
     token = create_access_token({"sub": str(existing_user["_id"])})
 
-    # sending the token and user id to the frontend so I can store it in localStorage and use it for authentication and identifying the user in the frontend
     return {"access_token": token, "token_type": "bearer", "sender_id": str(existing_user["_id"])}
+
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="127.0.0.1", port=8000)

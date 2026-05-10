@@ -73,6 +73,7 @@ function ConvoBoard() {
 
     useEffect(() => {
         getConvos();
+        console.log(selectedConvo)
     }, [type]);
 
     return (
@@ -82,11 +83,11 @@ function ConvoBoard() {
             <div style={{ width: "30%", borderRight: "1px solid #ccc", padding: "10px" }}>
                 
                 <div>
-                    <button onClick={() => { setActiveTab("DMs"); setType("DMs"); }}>
+                    <button onClick={() => { setActiveTab("DMs"); setType("DMs"); setSelectedConvo(null); }}>
                         DMs
                     </button>
 
-                    <button onClick={() => { setActiveTab("Groups"); setType("Groups"); }}>
+                    <button onClick={() => { setActiveTab("Groups"); setType("Groups"); setSelectedConvo(null); }}>
                         Groups
                     </button>
                 </div>
@@ -136,7 +137,6 @@ function ConvoBoard() {
                             padding: "10px",
                             overflowY: "auto"
                         }}>
-                            {/* messages will go here later */}
                             <ChatRoom conversation={selectedConvo} />
                         </div>
                     </div>
