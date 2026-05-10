@@ -26,10 +26,13 @@ function Login(){
 
         if(response.ok){
             console.log("Login successful!")
+
             localStorage.setItem("token", data.access_token);
+            localStorage.setItem("sender_id", data.sender_id);
+
             setUsername("");
             setPassword("");
-            navigate("/dm")
+            navigate("/conversations");
         }
     }
 
