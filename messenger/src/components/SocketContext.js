@@ -1,13 +1,15 @@
 import React from "react";
-import { createContext, useEffect, useRef, useContext } from "react";
+import { createContext, useEffect, useRef, useContext, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 const SocketContext = createContext();
 
  export function SocketProvider({children}){
     const socketRef = useRef(null); // Creating a ref to hold the WebSocket instance and make it persistent across re-renders
+    const navigate = useNavigate();
+    const [token, setToken] = useState(localStorage.getItem("token"));
 
     useEffect(() => {
-        const token = localStorage.getItem("token"); // Retrieving the token from localStorage
 
         if(!token) {
             console.error("No token found");
@@ -20,8 +22,16 @@ const SocketContext = createContext();
             console.log("WebSocket connected");
         }
 
-        socketRef.current.onclose = () => {
+        socketRef.current.onclose = (event) => {
             console.log("WebSocket disconnected");
+
+            if(event.code === 1008) {
+                console.error("WebSocket closed due to invalid or expired token");
+                localStorage.removeItem("token");
+                localStorage.removeItem("sender_id");
+                setToken(null);
+                navigate("/login");
+            }
         }
 
         return () => {
@@ -29,7 +39,7 @@ const SocketContext = createContext();
                 socketRef.current.close(); // Closing the WebSocket connection when the component unmounts
             }
         }
-    }, []); // the empty dependency array ensures that this effect runs only once when the component mounts
+    }, [token]); //re-run this effect if the token changes (e.g., on login/logout)
 
     const send = (message) => {
         if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
@@ -42,7 +52,7 @@ const SocketContext = createContext();
 
     return(
         // Providing the WebSocket instance and the sendMessage function to the rest of the app through context
-        <SocketContext.Provider value={{ socketRef, send }}>
+        <SocketContext.Provider value={{ socketRef, send, setToken }}> {/* Providing the setToken function to allow components to update the token state, e.g., on login/logout*/}
             {children}
         </SocketContext.Provider>
     );

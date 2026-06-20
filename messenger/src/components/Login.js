@@ -1,38 +1,48 @@
 import React from "react";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
+import { useSocket } from "./SocketContext";
 
 function Login(){
     const navigate = useNavigate();
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
+    const { setToken } = useSocket();
 
     const handleSubmit = async (e) =>{
-        e.preventDefault();
+        e.preventDefault(); // preventing the default form submission behavior to handle it with JavaScript
 
-        const response = await fetch('http://localhost:8000/login',
-            {
-                method: 'POST',
-                headers: {
-                    'Content-type': 'application/json'
-                },
-                body: JSON.stringify({
-                    username, password
-                })
+        try{
+            const response = await fetch('http://localhost:8000/login',
+                {
+                    method: 'POST',
+                    headers: {
+                        'Content-type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        username, password
+                    })
+                }
+            )
+
+            const data = await response.json();
+
+            if(response.ok){
+                console.log("Login successful!")
+
+                localStorage.setItem("token", data.access_token);
+                localStorage.setItem("sender_id", data.sender_id);
+                setToken(data.access_token); // Update the token state in the SocketContext to trigger a new WebSocket connection
+
+                setUsername("");
+                setPassword("");
+                navigate("/conversations");
+            } else {
+                console.error("Login failed:", data.detail);
             }
-        )
-
-        const data = await response.json();
-
-        if(response.ok){
-            console.log("Login successful!")
-
-            localStorage.setItem("token", data.access_token);
-            localStorage.setItem("sender_id", data.sender_id);
-
-            setUsername("");
-            setPassword("");
-            navigate("/conversations");
+        }
+        catch(error){
+            console.error("Login failed:", error);
         }
     }
 

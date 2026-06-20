@@ -6,6 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from database import messages_collection, user_collection, conversations_collection
 import json
+import asyncio
 
 app = FastAPI()
 
@@ -16,6 +17,15 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+async def handle_expired_token(websocket: WebSocket, token: str):
+    while True:
+        await asyncio.sleep(30)  # Check every 30 seconds
+
+        if not verify_token(token):
+            print("Token expired for user, closing websocket")
+            await websocket.close(code=1008, reason="Token expired")
+            return
 
 class ConnectionManager:
     def __init__(self):
@@ -135,7 +145,7 @@ async def websocket_endpoint(websocket: WebSocket, token: str):
     userID = verify_token(token)
 
     if not userID:
-        await websocket.close()
+        await websocket.close(code=1008, reason="Invalid or expired token")
         return
 
     user = await user_collection.find_one({
@@ -143,6 +153,10 @@ async def websocket_endpoint(websocket: WebSocket, token: str):
     })
 
     username = user["username"]
+
+    # start a background task to check for token expiration every 30 seconds
+    print("Starting token expiry task for user:", username)
+    expiry_task = asyncio.create_task(handle_expired_token(websocket, token))
 
     try:
         while True:
@@ -206,10 +220,12 @@ async def websocket_endpoint(websocket: WebSocket, token: str):
 
     except WebSocketDisconnect:
         manager.disconnect(websocket)
+        expiry_task.cancel()  # Stop the token expiration task when the client disconnects
         print("Client disconnected")
 
     except Exception as e:
         print("Websocket error:", e)
+        expiry_task.cancel()  # Stop the token expiration task on error
         manager.disconnect(websocket)
 
 
@@ -238,7 +254,7 @@ async def login(user: User):
     )
 
     if not existing_user:
-        raise HTTPException(status_code=400, detail="Invalid username or password")
+        raise HTTPException(status_code=400, detail="This user does not exist, please sign up first")
 
     if not verify_password(user.password, existing_user["hashed_password"]):
         raise HTTPException(status_code=400, detail="Invalid username or password")
@@ -247,7 +263,7 @@ async def login(user: User):
 
     return {"access_token": token, "token_type": "bearer", "sender_id": str(existing_user["_id"])}
 
-
+# to run the server, use: uvicorn main:app --reload
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(app, host="127.0.0.1", port=8000)
