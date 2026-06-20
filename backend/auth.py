@@ -20,10 +20,11 @@ def verify_password(plain_password: str, hashed_password: str):
     return pwd_context.verify(plain_password, hashed_password)
 
 # create JWT token with 1 day expiration for authentication and storing user info in the frontend
+# gonna use 2 minutes for testing purposes, change to 1 day in production
 def create_access_token(data: dict):
     to_encode = data.copy()
 
-    expire = datetime.now(timezone.utc) + timedelta(days=1)
+    expire = datetime.now(timezone.utc) + timedelta(minutes=2)
 
     to_encode.update({"exp": expire})
 
