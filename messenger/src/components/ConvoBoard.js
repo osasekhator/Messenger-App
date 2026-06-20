@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
 import ChatRoom from "./ChatRoom";
+import "../stylesheets/ConvoBoard.css";
 
 function ConvoBoard() {
     const [activeTab, setActiveTab] = useState("DMs");
@@ -77,10 +78,10 @@ function ConvoBoard() {
     }, [type]);
 
     return (
-        <div className="convoBoard" style={{ display: "flex", height: "100vh" }}>
+        <div className="convoBoard">
             
             {/* LEFT PANEL */}
-            <div style={{ width: "30%", borderRight: "1px solid #ccc", padding: "10px" }}>
+            <div className="left_panel">
                 
                 <div>
                     <button onClick={() => { setActiveTab("DMs"); setType("DMs"); setSelectedConvo(null); }}>
@@ -107,8 +108,9 @@ function ConvoBoard() {
                                 style={{
                                     padding: "10px",
                                     cursor: "pointer",
+                                    borderRadius: "5px",
                                     backgroundColor:
-                                    selectedConvo?._id === conv._id ? "#ddd" : "transparent",
+                                    selectedConvo?._id === conv._id ? "rgb(212, 209, 198)" : "transparent",
                                 }}
                             >
                                 {conv.display_name || conv.name}
@@ -123,7 +125,7 @@ function ConvoBoard() {
             </div>
 
             {/* RIGHT PANEL (CHAT AREA) */}
-            <div style={{ width: "70%", padding: "10px" }}>
+            <div className="right_panel">
                 
                 {!selectedConvo ? (
                     <p>Select a conversation to start chatting</p>
@@ -145,17 +147,10 @@ function ConvoBoard() {
 
             {/* CREATE MODAL */}
             {creating && (
-                <div style={{
-                    position: "absolute",
-                    top: "20%",
-                    left: "40%",
-                    background: "white",
-                    padding: "20px",
-                    border: "1px solid black"
-                }}>
+                <div className="createModal">
                     <h3>Create Conversation</h3>
 
-                    <form onSubmit={createConvo}>
+                    <form className="convoForm" onSubmit={createConvo}>
                         
                         {type === "Groups" && (
                             <>

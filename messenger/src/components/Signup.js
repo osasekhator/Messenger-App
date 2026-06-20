@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { useEffect, useNavigate } from "react-router-dom";
 import Header from "./Header";
 import Footer from "./Footer";
+import "../stylesheets/Signup.css";
 
 function Signup(){
     const [username, setUsername] = useState("");
@@ -45,7 +46,8 @@ function Signup(){
     }
 
     return(
-        <div>
+        <div className="index">
+            <h1>Create an account!</h1>
             <form onSubmit={(e) => {
                 e.preventDefault();
                 if (verifyInputs(username, password)) {

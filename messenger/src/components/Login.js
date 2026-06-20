@@ -2,6 +2,7 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { useSocket } from "./SocketContext";
+import "../stylesheets/Login.css";
 
 function Login(){
     const navigate = useNavigate();
@@ -47,7 +48,9 @@ function Login(){
     }
 
     return(
-        <div>
+        <div className="index">
+            <h1>Welcome back!</h1>
+            
             <form onSubmit={handleSubmit} className="login">
                 <label htmlFor="username">Username: </label>
                 <input 

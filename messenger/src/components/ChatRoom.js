@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useSocket } from "./SocketContext";
 
 function ChatRoom({ conversation }) {
@@ -72,19 +72,49 @@ function ChatRoom({ conversation }) {
                 ))}
             </div>
 
-            <input
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                        sendMessage();
-                    }
+            <div
+                style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "8px",
+                    width: "90%",
+                    marginTop: "10%",
                 }}
-            />
+            >
+                <input
+                    value={input}
+                    onChange={(e) => setInput(e.target.value)}
+                    onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                            sendMessage();
+                        }
+                    }}
+                    style={{
+                        flex: 1,
+                        minWidth: 0,
+                        height: "36px",
+                        padding: "8px 12px",
+                        borderRadius: "8px",
+                        boxSizing: "border-box",
+                        margin: 0,
+                    }}
+                />
 
-            <button onClick={sendMessage}>
-                Send
-            </button>
+                <button
+                    onClick={sendMessage}
+                    style={{
+                        width: "20%",
+                        minWidth: "80px",
+                        padding: "8px 12px",
+                        cursor: "pointer",
+                        height: "36px",
+                        boxSizing: "border-box",
+                        margin: 0,
+                    }}
+                >
+                    Send
+                </button>
+            </div>
         </div>
     );
 }
