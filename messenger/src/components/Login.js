@@ -2,15 +2,23 @@ import React from "react";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
 import { useSocket } from "./SocketContext";
+import NotificationSystem from "./NotificationSystem";
+import "../stylesheets/Login.css";
 
 function Login(){
     const navigate = useNavigate();
     const [username, setUsername] = useState('');
     const [password, setPassword] = useState('');
+    const [notification, setNotification] = useState("");
+    const [notificationType, setNotificationType] = useState("error");
+    const [loading, setLoading] = useState(false);
     const { setToken } = useSocket();
+
+    const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 
     const handleSubmit = async (e) =>{
         e.preventDefault(); // preventing the default form submission behavior to handle it with JavaScript
+        setLoading(true);
 
         try{
             const response = await fetch('http://localhost:8000/login',
@@ -36,24 +44,34 @@ function Login(){
 
                 setUsername("");
                 setPassword("");
+                setNotificationType("success");
+                setNotification("Login successful! Redirecting...");
+                await delay(1200);
                 navigate("/conversations");
             } else {
                 console.error("Login failed:", data.detail);
+                setNotificationType("error");
+                setNotification(data.detail);
+                setLoading(false);
             }
         }
         catch(error){
             console.error("Login failed:", error);
+            setLoading(false);
         }
     }
 
     return(
-        <div>
+        <div className="index">
+            <h1>Welcome back!</h1>
+
             <form onSubmit={handleSubmit} className="login">
                 <label htmlFor="username">Username: </label>
                 <input 
                     type="text" 
                     name="username" 
                     placeholder="Enter your username" 
+                    required
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                 />
@@ -68,8 +86,11 @@ function Login(){
                     onChange={(e) => setPassword(e.target.value)}
                 />
 
-                <button type="submit">Submit</button>
+                <button type="submit" disabled={loading}>
+                    {loading ? "Logging in..." : "Submit"}
+                </button>
             </form>
+            {notification && <NotificationSystem message={notification} onClose={() => setNotification("")} type={notificationType}/>}
         </div>
     );
 };

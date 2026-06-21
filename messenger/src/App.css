@@ -1,4 +1,41 @@
-html, body {
+.App {
+  text-align: center;
+  flex-direction: column;
+  display: flex;
+  width: 100%;
+  min-height: 100vh;
+  background-color: rgb(250, 247, 234);
+  overflow-x: hidden;
+  box-sizing: border-box;
+}
+
+nav {
+  background-color: rgb(184, 62, 184);
+  padding: 2%;
+  display: flex;
+  justify-content: space-around; /* Even spacing */
+  color: white;
+  font-weight: bold;
+}
+
+nav a {
+  color: white;
+  text-decoration: none;
+  font-size: larger;
+  padding: 2% 2%; /* might want to remove*/
+}
+
+footer {
+  background-color: rgb(184, 62, 184);
+  color: white;
+  text-align: center;
+  padding: 10px;
+  margin-top: 20px;
+  font-weight: bold;
+  font-size: large;
+}
+
+/*html, body {
   margin: 0;
   padding: 0;
   width: 100%;
@@ -11,24 +48,24 @@ html, body {
   display: flex;
   width: 100%;
   min-height: 100vh;
-  background-color: rgb(253, 226, 230);
+  background-color: rgb(250, 247, 234);
 }
 
 header {
-  background-color: purple; /* Deep blue */
+  background-color: rgb(184, 62, 184); // Deep blue
   color: white;
   padding: 20px;
   margin: 0;
   display: flex;
   align-items: center;
-  justify-content: space-between; /* Align logo left, text right */
+  justify-content: space-between; // Align logo left, text right
 }
 
 nav {
-  background-color: purple; /* Dark blue */
+  background-color: purple; // Dark blue
   padding: 10px;
   display: flex;
-  justify-content: space-around; /* Even spacing */
+  justify-content: space-around; // Even spacing
   color: white;
 }
 
@@ -107,4 +144,4 @@ form{
   height: 100%;
   
 }
-
+*/
