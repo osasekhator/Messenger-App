@@ -61,9 +61,11 @@ function ConvoBoard() {
 
             if (response.ok) {
                 setConversations((prev) => [...prev, data]);
-                setCreating(false);
                 setName("");
                 setParticipants([]);
+                setCreating(false);
+                console.log("Conversation created:", data);
+                console.log("Creating:", creating)
             } else {
                 console.error("Create convo failed:", data);
             }

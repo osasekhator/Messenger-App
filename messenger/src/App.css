@@ -11,7 +11,7 @@
 
 nav {
   background-color: rgb(184, 62, 184);
-  padding: 5%;
+  padding: 2%;
   display: flex;
   justify-content: space-around; /* Even spacing */
   color: white;

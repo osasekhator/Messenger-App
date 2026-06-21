@@ -36,6 +36,12 @@ class ConnectionManager:
         await websocket.accept()
 
     def join_room(self, websocket: WebSocket, conversation_id: str):
+        # remove this websocket from any previous room first, was broadcasting twice
+        old_room = self.socket_rooms.get(websocket)
+        if old_room and old_room in self.active_connections:
+            if websocket in self.active_connections[old_room]:
+                self.active_connections[old_room].remove(websocket)
+
         self.socket_rooms[websocket] = conversation_id
 
         if conversation_id not in self.active_connections:
@@ -100,6 +106,7 @@ async def create_conversation(conversation: dict):
     }
     result = await conversations_collection.insert_one(convo)
     convo["_id"] = str(result.inserted_id)
+    convo["participants"] = [str(p) for p in convo["participants"]]
     return convo
 
 

@@ -1,10 +1,17 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useSocket } from "./SocketContext";
 
 function ChatRoom({ conversation }) {
 
     const [messages, setMessages] = useState([]);
     const [input, setInput] = useState("");
+    const textareaRef = useRef(null);
+
+    const handleInputChange = (e) => {
+        setInput(e.target.value);
+        e.target.style.height = "auto";
+        e.target.style.height = `${e.target.scrollHeight}px`;
+    };
 
     const { socketRef, send } = useSocket();
 
@@ -33,15 +40,17 @@ function ChatRoom({ conversation }) {
         const loadHistory = (event) => {
             const data = JSON.parse(event.data);
             //console.log("Selected convo:", conversation);
+            console.log("LISTENER FIRED — message id:", data._id, "at", Date.now());
             console.log("Received:", data);
 
             setMessages((prev) => [...prev, data]);
         };
 
-        
-         socketRef.current.addEventListener("message", loadHistory); // listen for the next message to add to the history
+        console.log("ATTACHING listener for conversation:", conversation._id);
+        socketRef.current.addEventListener("message", loadHistory); // listen for the next message to add to the history
 
         return() => {
+            console.log("REMOVING listener for conversation:", conversation._id);
             socketRef.current.removeEventListener("message", loadHistory); // cleanup the event listener when the component unmounts or conversation changes
         };
 
@@ -60,6 +69,9 @@ function ChatRoom({ conversation }) {
         send(message);
 
         setInput("");
+        if (textareaRef.current) {
+            textareaRef.current.style.height = "36px";
+        }
     };
 
     return (
@@ -81,22 +93,27 @@ function ChatRoom({ conversation }) {
                     marginTop: "10%",
                 }}
             >
-                <input
+                <textarea
+                    ref={textareaRef}
                     value={input}
-                    onChange={(e) => setInput(e.target.value)}
+                    onChange={handleInputChange}
                     onKeyDown={(e) => {
-                        if (e.key === "Enter") {
+                        if (e.key === "Enter" && !e.shiftKey) {
+                            e.preventDefault();
                             sendMessage();
                         }
                     }}
                     style={{
                         flex: 1,
                         minWidth: 0,
-                        height: "36px",
+                        minHeight: "36px",
                         padding: "8px 12px",
                         borderRadius: "8px",
+                        borderWidth: "0px",
                         boxSizing: "border-box",
                         margin: 0,
+                        resize: "none",
+                        overflow: "hidden",
                     }}
                 />
 
