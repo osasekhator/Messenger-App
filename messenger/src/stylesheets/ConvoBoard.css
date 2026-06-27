@@ -65,3 +65,19 @@ button:active{
   box-shadow: 0px 2px 4px rgba(0, 0, 0, 0.15);
   transform: translateY(0px);
 }
+
+.unreadDot {
+    width: 10px;
+    height: 10px;
+    background-color: rgb(207, 87, 207);
+    border-radius: 50%;
+    display: inline-block;
+    margin-left: 4%;
+}
+
+.convoDetails {
+    text-align: center;
+    align-content: center;
+    align-items: center;
+    justify-content: center;
+}

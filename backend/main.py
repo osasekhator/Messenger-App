@@ -122,7 +122,8 @@ async def get_conversations(request: ConvoRequest):
     result = []
 
     for convo in conversations:
-        convo["_id"] = str(convo["_id"])
+        convo_id = convo["_id"]
+        convo["_id"] = str(convo_id)
         convo["participants"] = [str(p) for p in convo["participants"]]
 
         if convo["type"] == "DMs":
@@ -137,6 +138,26 @@ async def get_conversations(request: ConvoRequest):
 
             convo["display_name"] = users[0]["username"] if users else "Unknown"
 
+        last_read = convo.get("last_read", {}).get(request.user_id)
+
+        if last_read:
+            unread_count = await messages_collection.count_documents(
+                {
+                    "conversation_id": convo_id,
+                    "timestamp": {"$gt": last_read},
+                    "user_id": {"$ne": ObjectId(request.user_id)}
+                }
+            )
+        else:
+            unread_count = await messages_collection.count_documents(
+                {
+                    "conversation_id": convo_id,
+                    "user_id": {"$ne": ObjectId(request.user_id)}
+                }
+            )
+
+        convo["unread"] = unread_count > 0
+        print(f"Conversation {convo['_id']}: unread_count={unread_count}, unread={convo['unread']}")
         result.append(convo)
 
     return result
@@ -186,6 +207,13 @@ async def websocket_endpoint(websocket: WebSocket, token: str):
 
                 manager.join_room(websocket, conversation_id)
 
+                # adds last_read time for each user in the conversation - to be used for unread mesages
+                update_result = await conversations_collection.update_one(
+                    {"_id": ObjectId(conversation_id)},
+                    {"$set": {f"last_read.{userID}": datetime.now(timezone.utc)}}
+                )
+                print(f"last_read update - matched: {update_result.matched_count}, modified: {update_result.modified_count}")
+
                 old_messages = await messages_collection.find(
                     {
                         "conversation_id": ObjectId(conversation_id)
@@ -198,7 +226,15 @@ async def websocket_endpoint(websocket: WebSocket, token: str):
                     msg["_id"] = str(msg["_id"])
                     msg["user_id"] = str(msg["user_id"])
                     msg["conversation_id"] = str(msg["conversation_id"])
-                    msg["timestamp"] = msg["timestamp"].isoformat() if isinstance(msg["timestamp"], datetime) else msg["timestamp"]
+
+                    ts = msg["timestamp"]
+
+                    # ensure timestamp is timezone-aware and convert to ISO format for frontend
+                    if isinstance(ts, datetime):
+                        if ts.tzinfo is None:
+                            ts = ts.replace(tzinfo=timezone.utc)
+                        msg["timestamp"] = ts.isoformat()
+                    #msg["timestamp"] = msg["timestamp"].isoformat() if isinstance(msg["timestamp"], datetime) else msg["timestamp"]
 
                     await websocket.send_json(msg)
 

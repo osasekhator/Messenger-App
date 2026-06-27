@@ -1,0 +1,79 @@
+.messageArea {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    padding: 16px;
+    flex: 1;
+    overflow-y: auto;
+}
+
+.bubble {
+    max-width: 60%;
+    min-width: 30%;
+    padding: 1% 3%;
+    margin-top: 2%;
+    margin-bottom: 2%;
+    border-radius: 20px;
+    word-wrap: break-word;
+}
+
+.bubble.sent {
+    background-color: plum;
+    color: white;
+    align-self: flex-end;
+    text-align: left;
+    border-bottom-right-radius: 4px;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.4);
+}
+
+.bubble.received {
+    background-color:rgb(212, 209, 198);
+    color: #333;
+    align-self: flex-start;
+    text-align: left;
+    border-bottom-left-radius: 4px;
+    box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.4);
+}
+
+.sender-name {
+    display: block;
+    font-size: 0.35em;
+    margin-bottom: 0px;
+    opacity: 0.7;
+}
+
+.message-content {
+    margin: 0;
+}
+
+.divider {
+    margin: 8px 0;
+    border: none;
+    border-top: 2px solid rgba(255, 255, 255, 0.3);
+    box-shadow: 0px 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.message-time {
+    display: block;
+    font-size: 0.65em;
+    opacity: 0.6;
+    margin-top: 4px;
+    text-align: right;
+}
+
+.dateSeparator {
+    display: flex;
+    justify-content: center;
+    margin: 16px 0 12px 0;
+}
+
+.dateSeparator span {
+    background-color: #e4e6eb;
+    color: #65676b;
+    font-size: 0.85em;
+    font-weight: 600;
+    padding: 1% 4%;
+    border-radius: 20px;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
+    letter-spacing: 0.3px;
+}

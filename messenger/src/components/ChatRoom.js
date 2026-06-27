@@ -1,11 +1,13 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useSocket } from "./SocketContext";
+import "../stylesheets/ChatRoom.css";
 
 function ChatRoom({ conversation }) {
 
     const [messages, setMessages] = useState([]);
     const [input, setInput] = useState("");
     const textareaRef = useRef(null);
+    const senderID = localStorage.getItem("sender_id");
 
     const handleInputChange = (e) => {
         setInput(e.target.value);
@@ -74,14 +76,65 @@ function ChatRoom({ conversation }) {
         }
     };
 
+    // helper function to format timestamps, to be used when rendering messages
+    const formatTime = (timestamp) => {
+        const date = new Date(timestamp);
+        return date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+    };
+
+    // helper function to format date labels in the message history, e.g., "Today", "Yesterday", or specific date
+    const formatDateLabel = (timestamp) => {
+        const messageDate = new Date(timestamp);
+        const today = new Date();
+        const yesterday = new Date();
+        yesterday.setDate(today.getDate() - 1);
+
+        const isSameDay = (d1, d2) =>
+            d1.getDate() === d2.getDate() &&
+            d1.getMonth() === d2.getMonth() &&
+            d1.getFullYear() === d2.getFullYear();
+
+        if (isSameDay(messageDate, today)) {
+            return "Today";
+        } else if (isSameDay(messageDate, yesterday)) {
+            return "Yesterday";
+        } else {
+            return messageDate.toLocaleDateString([], {
+                month: "long",
+                day: "numeric",
+                year: messageDate.getFullYear() !== today.getFullYear() ? "numeric" : undefined,
+            });
+        }
+    };
+
     return (
-        <div>
-            <div>
-                {messages.map((msg, i) => (
-                    <p key={i}>
-                        <strong>{msg.sender}:</strong> {msg.content}
-                    </p>
-                ))}
+        <div style={{ display: "flex", flexDirection: "column", height: "100%" }}>
+            <div className="messageArea">
+                {messages.map((msg, i) => {
+                    const isSender = msg.user_id === senderID;
+                    const showDateSeparator = i === 0 || 
+                    formatDateLabel(msg.timestamp) !== formatDateLabel(messages[i - 1].timestamp);
+
+                    return (
+                        <React.Fragment key= {i}>
+                            {showDateSeparator && (
+                                <div className="dateSeparator">
+                                    <span>{formatDateLabel(msg.timestamp)}</span>
+                                </div>
+                            )}
+
+                            <div className={`bubble ${isSender ? "sent" : "received"}`}>
+                                {isSender && <strong className="senderName">You</strong>} 
+                                {!isSender && <strong className="senderName">{msg.sender}</strong>}
+                                <hr className="divider" />
+                                <p className="messageContent">
+                                    {msg.content}
+                                </p>
+                                <span className="message-time">{formatTime(msg.timestamp)}</span>
+                            </div>
+                        </React.Fragment>
+                    );
+                })}
             </div>
 
             <div
@@ -120,8 +173,8 @@ function ChatRoom({ conversation }) {
                 <button
                     onClick={sendMessage}
                     style={{
-                        width: "20%",
-                        minWidth: "80px",
+                        minWidth: "20%",
+                        minHeight: "90%",
                         padding: "8px 12px",
                         cursor: "pointer",
                         height: "36px",
