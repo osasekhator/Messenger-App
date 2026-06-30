@@ -9,7 +9,10 @@ function ConvoBoard() {
     const [type, setType] = useState("DMs");
 
     const [creating, setCreating] = useState(false);
+    const [addingMember, setAddingMember] = useState(false);
+
     const [name, setName] = useState("");
+    const [newMember, setNewMember] = useState("");
     const [participants, setParticipants] = useState([]);
 
     const [conversations, setConversations] = useState([]);
@@ -39,7 +42,9 @@ function ConvoBoard() {
             const data = await response.json();
 
             // safety: ensure array
-            setConversations(Array.isArray(data) ? data : []);
+            const convoList = Array.isArray(data) ? data : []
+            setConversations(convoList);
+            return convoList;
         } catch (error) {
             console.error("Error fetching conversations:", error);
         }
@@ -83,6 +88,40 @@ function ConvoBoard() {
             console.error("Error creating conversation:", error);
         }
     }
+
+    async function addMember(e) {
+        e.preventDefault();
+
+        try {
+            const payload = {
+                username: newMember,
+                convo_id: selectedConvo._id,
+            };
+
+            const response = await fetch("http://localhost:8000/add-member",
+                {
+                    method: "PUT",
+                    headers: {"Content-Type": "application/json"},
+                    body: JSON.stringify(payload)
+                }
+            );
+
+            const data = await response.json();
+
+            if(response.ok) {
+                setNewMember("");
+                setAddingMember(false);
+                console.log("Member added succesfully!");
+                //setSelectedConvo(data);
+
+                const updatedList = await getConvos(); //getting the fresh list directly, not from a stale state
+                const updatedConvo = updatedList.find((c) => c._id === selectedConvo._id);
+                if (updatedConvo) setSelectedConvo(updatedConvo);
+            }
+        } catch(error) {
+            console.error("Could not add your member: ", error);
+        }
+    };
 
     useEffect(() => {
         getConvos();
@@ -207,7 +246,10 @@ function ConvoBoard() {
                         <p>Select a conversation to start chatting</p>
                     ) : (
                         <div>
-                            <h2 onClick={() => {setViewMode("details")}}>{selectedConvo.display_name || selectedConvo.name}</h2>
+                            <h2 style={{cursor: "pointer"}} 
+                            onClick={() => {if (activeTab === "Groups") setViewMode("details")}}>
+                                {selectedConvo.display_name || selectedConvo.name}
+                            </h2>
 
                             <div style={{
                                 border: "1px solid #ccc",
@@ -271,11 +313,58 @@ function ConvoBoard() {
                 </>
             )}
 
-            {viewMode === "details" && (
+            {viewMode === "details" && activeTab === "Groups" && (
                 <div className="convoDetails">
-                    <h2>{selectedConvo.display_name || selectedConvo.name}</h2>
+                    <h2 style={{cursor:"pointer", textAlign:"center"}}
+                    onClick={() => {setViewMode("convos")}}>
+                        {selectedConvo.display_name || selectedConvo.name}
+                    </h2>
+
+                    <hr/>
+
+                    <div className="memberList">
+                        <div className="add-member-sign">
+                            <button
+                                className="iconButton"
+                                onClick={() => setAddingMember(true)}
+                                title="Add member"
+                                aria-label="Add member"
+                            >
+                                ＋
+                            </button>
+                            <span>Add Member</span>
+                        </div>
+                        {selectedConvo.names.map((p) => (
+                            <p>{p}</p>
+                        ))}
+                    </div>
                 </div>
             )}
+
+            {/* ADDING MODAL */}
+                {addingMember && (
+                    <div className="createModal">
+                        <h3>Add a Member</h3>
+
+                        <form className="convoForm" onSubmit={addMember}>
+
+                            <input
+                                placeholder="Enter username"
+                                onChange={(e) =>
+                                    setNewMember(e.target.value.trim())
+                                }
+                                required
+                            />
+
+                            <br /><br />
+
+                            <button type="submit">Add Member</button>
+                            <button type="button" onClick={() => setAddingMember(false)}>
+                                Cancel
+                            </button>
+                        </form>
+                    </div>
+                )}
         </div>
     );
 }

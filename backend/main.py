@@ -126,6 +126,14 @@ async def get_conversations(request: ConvoRequest):
         convo["_id"] = str(convo_id)
         convo["participants"] = [str(p) for p in convo["participants"]]
 
+        all_users = await user_collection.find(
+            {
+                "_id": {"$in": [ObjectId(p) for p in convo["participants"]]}
+            }
+        ).to_list(None)
+
+        convo["names"] = [u["username"] for u in all_users]
+
         if convo["type"] == "DMs":
             other_participants = [
                 p for p in convo["participants"]
@@ -305,6 +313,44 @@ async def login(user: User):
     token = create_access_token({"sub": str(existing_user["_id"])})
 
     return {"access_token": token, "token_type": "bearer", "sender_id": str(existing_user["_id"])}
+
+@app.put("/add-member")
+async def add_member(newMember: dict):
+    user = await user_collection.find_one(
+        {"username": newMember["username"]}
+    )
+
+    if not user:
+        raise HTTPException(status_code=400, detail="This user does not exist")
+
+    convo = await conversations_collection.find_one(
+        {"_id": ObjectId(newMember["convo_id"])}
+    )
+
+    if not convo:
+        raise HTTPException(status_code=404, detail="Conversation not found")
+
+    if user["_id"] in convo["participants"]:
+        raise HTTPException(status_code=400, detail="This person is already in this group!")
+
+    update_result = await conversations_collection.update_one(
+        {"_id": ObjectId(newMember["convo_id"])},
+        {"$addToSet": {"participants": user["_id"]}}
+    )
+
+    print(update_result)
+
+    # fetch and return the updated conversation
+    updated_convo = await conversations_collection.find_one(
+        {"_id": ObjectId(newMember["convo_id"])}
+    )
+
+    updated_convo["_id"] = str(updated_convo["_id"])
+    updated_convo["participants"] = [str(p) for p in updated_convo["participants"]]
+
+    return updated_convo
+
+    
 
 # to run the server, use: uvicorn main:app --reload
 if __name__ == "__main__":
